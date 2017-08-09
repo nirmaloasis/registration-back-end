@@ -8,6 +8,12 @@ import com.registration.repositories.IUserRoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -20,6 +26,13 @@ public class UserService {
     private IUserRepository userRepository;
     private IUserRoleRepository userRoleRepository;
 
+    private MailService mailService;
+
+    @Autowired
+    public void setMailService(MailService mailService) {
+        this.mailService = mailService;
+    }
+
     @Autowired
     public void setUserRepository(IUserRepository userRepository) {
         this.userRepository = userRepository;
@@ -30,7 +43,7 @@ public class UserService {
         this.userRoleRepository = userRoleRepository;
     }
 
-    public User create(Request request) throws ParseException {
+    public User create(Request request) throws Exception {
         User user = new User(request.getUsername(),request.getEmail(),request.getPassword(),0);
         DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
         Date dobDate = format.parse(request.getDob());
@@ -42,6 +55,7 @@ public class UserService {
             return user;
         }
         else {
+            mailService.sendEmail(request.getEmail(),"registration@gmail.com",request.getUsername());
             this.userRoleRepository.save(userRole);
             return this.userRepository.save(user);
         }
@@ -49,11 +63,18 @@ public class UserService {
 
     public List<User> findByUsername(String username){
         return this.userRepository.findByUsername(username);
-
     }
     public String findByUsernameAndPassword(String username,String password){
-        return (this.userRepository.findByUsernameAndPassword(username,password).size() == 0)?"Failure":"Success";
+        List<User> users=this.userRepository.findByUsernameAndPassword(username,password);
+        return (users.size() == 0)?"Failure":String.valueOf(users.get(0).getEnabled());
     }
 
+    public String verifyEmail(String encryptedUserName) throws NoSuchPaddingException, UnsupportedEncodingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
+        String username = mailService.decryptData(encryptedUserName);
+        List<User> users = findByUsername(username);
+        users.get(0).setEnabled(1);
+        this.userRepository.save(users.get(0));
+        return "success";
+    }
 
 }

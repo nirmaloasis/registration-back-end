@@ -12,6 +12,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 
 @RestController
@@ -26,13 +32,16 @@ public class UserController {
     }
 
     @RequestMapping(value ="/enroll" , method = RequestMethod.POST)
-    public User create(@RequestBody Request request) throws ParseException {
+    public User create(@RequestBody Request request) throws Exception {
         return this.userService.create(request);
     }
     @RequestMapping(value = "/login",method = RequestMethod.POST)
     public String findUser(@RequestBody Request request){
         return this.userService.findByUsernameAndPassword(request.getUsername(),request.getPassword());
     }
-
+    @RequestMapping(value = "/verify/{encryptedUsername}", method = RequestMethod.GET)
+    public String findUser(@RequestBody String encryptedUsername) throws NoSuchPaddingException, UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        return this.userService.verifyEmail(encryptedUsername);
+    }
 
 }
